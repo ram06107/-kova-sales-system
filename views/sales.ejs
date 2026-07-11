@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sales - KOVA Sales</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-brand">KO<span>VA</span> Sales</div>
+    <ul class="navbar-nav">
+      <li><a href="/dashboard">Dashboard</a></li>
+      <li><a href="/sales" class="active">Sales</a></li>
+      <li><a href="/reports">Reports</a></li>
+      <li class="user-info">Hello, <strong><%= user.fullName %></strong></li>
+      <li><a href="/auth/logout">Logout</a></li>
+    </ul>
+  </nav>
+
+  <div class="container">
+    <h1 class="page-title">Record Sales</h1>
+
+    <% if (typeof error !== 'undefined' && error) { %>
+      <div class="alert alert-error"><%= error %></div>
+    <% } %>
+
+    <div class="card">
+      <div class="card-header">New Sale Entry</div>
+      <form method="POST" action="/sales/add">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Product</label>
+            <select name="product" required>
+              <option value="">Select product...</option>
+              <option value="yogurt">Yogurt</option>
+              <option value="tea">Tea</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Quantity</label>
+            <input type="number" name="quantity" placeholder="e.g. 10" min="1" required>
+          </div>
+          <div class="form-group">
+            <label>Unit Price (SSP)</label>
+            <input type="number" name="unit_price" placeholder="e.g. 500" min="1" step="0.01" required>
+          </div>
+          <div class="form-group">
+            <label>Sale Date</label>
+            <input type="date" name="sale_date" required>
+          </div>
+          <div class="form-group">
+            <button type="submit" class="btn btn-success" style="height:42px;margin-top:auto;">Record Sale</button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <div class="card" style="margin-top:16px;">
+      <div class="card-header">Sales History</div>
+      <% if (sales.length === 0) { %>
+        <p style="color:var(--text-secondary);text-align:center;padding:40px 0;">No sales recorded yet. Use the form above to add your first sale.</p>
+      <% } else { %>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Product</th>
+                <th>Qty</th>
+                <th>Unit Price</th>
+                <th>Total</th>
+                <th>Recorded By</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% sales.forEach(s => { %>
+                <tr>
+                  <td><%= s.sale_date %></td>
+                  <td><span class="badge badge-<%= s.product %>"><%= s.product %></span></td>
+                  <td><%= s.quantity %></td>
+                  <td><%= s.unit_price.toLocaleString() %> SSP</td>
+                  <td><strong><%= s.total_amount.toLocaleString() %> SSP</strong></td>
+                  <td><%= s.full_name %></td>
+                  <td>
+                    <% if (s.user_id === user.userId || user.role === 'admin') { %>
+                      <form method="POST" action="/sales/delete/<%= s.id %>" style="display:inline;" onsubmit="return confirm('Delete this sale?')">
+                        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                      </form>
+                    <% } %>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </div>
+  </div>
+
+  <script>
+    document.querySelector('input[name="sale_date"]').valueAsDate = new Date();
+  </script>
+</body>
+</html>

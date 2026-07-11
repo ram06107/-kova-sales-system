@@ -1,0 +1,4 @@
+node_modules/
+kova_sales.db
+*.db
+.env

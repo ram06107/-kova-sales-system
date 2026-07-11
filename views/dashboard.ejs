@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - KOVA Sales</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-brand">KO<span>VA</span> Sales</div>
+    <ul class="navbar-nav">
+      <li><a href="/dashboard" class="active">Dashboard</a></li>
+      <li><a href="/sales">Sales</a></li>
+      <li><a href="/reports">Reports</a></li>
+      <li class="user-info">Hello, <strong><%= user.fullName %></strong></li>
+      <li><a href="/auth/logout">Logout</a></li>
+    </ul>
+  </nav>
+
+  <div class="container">
+    <h1 class="page-title">Sales Dashboard</h1>
+
+    <!-- DAILY STATS -->
+    <h3 style="font-size:14px;color:var(--text-secondary);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px;">Today's Performance</h3>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="label">Total Revenue Today</div>
+        <div class="value"><%= daily.total.toLocaleString() %> <span class="currency">SSP</span></div>
+        <div class="growth <%= parseFloat(daily.growth) >= 0 ? 'up' : 'down' %>">
+          <%= parseFloat(daily.growth) >= 0 ? '▲' : '▼' %> <%= Math.abs(daily.growth) %>% vs yesterday
+        </div>
+      </div>
+      <div class="stat-card yogurt">
+        <div class="label">Yogurt Sales</div>
+        <div class="value"><%= daily.yogurt.total.toLocaleString() %> <span class="currency">SSP</span></div>
+        <div class="sub"><%= daily.yogurt.qty %> units sold</div>
+      </div>
+      <div class="stat-card tea">
+        <div class="label">Tea Sales</div>
+        <div class="value"><%= daily.tea.total.toLocaleString() %> <span class="currency">SSP</span></div>
+        <div class="sub"><%= daily.tea.qty %> units sold</div>
+      </div>
+    </div>
+
+    <!-- WEEKLY STATS -->
+    <h3 style="font-size:14px;color:var(--text-secondary);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px;">This Week (Last 7 Days)</h3>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="label">Weekly Revenue</div>
+        <div class="value"><%= weekly.total.toLocaleString() %> <span class="currency">SSP</span></div>
+        <div class="growth <%= parseFloat(weekly.growth) >= 0 ? 'up' : 'down' %>">
+          <%= parseFloat(weekly.growth) >= 0 ? '▲' : '▼' %> <%= Math.abs(weekly.growth) %>% vs last week
+        </div>
+      </div>
+      <div class="stat-card yogurt">
+        <div class="label">Weekly Yogurt</div>
+        <div class="value"><%= weekly.yogurt.total.toLocaleString() %> <span class="currency">SSP</span></div>
+        <div class="sub"><%= weekly.yogurt.qty %> units total</div>
+      </div>
+      <div class="stat-card tea">
+        <div class="label">Weekly Tea</div>
+        <div class="value"><%= weekly.tea.total.toLocaleString() %> <span class="currency">SSP</span></div>
+        <div class="sub"><%= weekly.tea.qty %> units total</div>
+      </div>
+    </div>
+
+    <!-- MONTHLY STATS -->
+    <h3 style="font-size:14px;color:var(--text-secondary);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px;">This Month</h3>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="label">Monthly Revenue</div>
+        <div class="value"><%= monthly.total.toLocaleString() %> <span class="currency">SSP</span></div>
+      </div>
+      <div class="stat-card yogurt">
+        <div class="label">Monthly Yogurt</div>
+        <div class="value"><%= monthly.yogurt.total.toLocaleString() %> <span class="currency">SSP</span></div>
+        <div class="sub"><%= monthly.yogurt.qty %> units total</div>
+      </div>
+      <div class="stat-card tea">
+        <div class="label">Monthly Tea</div>
+        <div class="value"><%= monthly.tea.total.toLocaleString() %> <span class="currency">SSP</span></div>
+        <div class="sub"><%= monthly.tea.qty %> units total</div>
+      </div>
+    </div>
+
+    <!-- CHART + RECENT SALES -->
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header">Daily Revenue (Last 7 Days)</div>
+        <div class="chart-container">
+          <canvas id="revenueChart"></canvas>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">Recent Transactions</div>
+        <% if (recentSales.length === 0) { %>
+          <p style="color:var(--text-secondary);text-align:center;padding:40px 0;">No sales recorded yet. <a href="/sales">Add your first sale</a></p>
+        <% } else { %>
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Product</th>
+                <th>Qty</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% recentSales.forEach(s => { %>
+                <tr>
+                  <td><%= s.sale_date %></td>
+                  <td><span class="badge badge-<%= s.product %>"><%= s.product %></span></td>
+                  <td><%= s.quantity %></td>
+                  <td><strong><%= s.total_amount.toLocaleString() %> SSP</strong></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+          <div style="text-align:center;margin-top:12px;">
+            <a href="/sales" class="btn btn-outline btn-sm">View All Sales</a>
+          </div>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const ctx = document.getElementById('revenueChart').getContext('2d');
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: <%- JSON.stringify(chart.labels) %>,
+        datasets: [
+          {
+            label: 'Yogurt (SSP)',
+            data: <%- JSON.stringify(chart.yogurt) %>,
+            backgroundColor: 'rgba(52, 168, 83, 0.7)',
+            borderColor: '#34a853',
+            borderWidth: 1,
+            borderRadius: 4
+          },
+          {
+            label: 'Tea (SSP)',
+            data: <%- JSON.stringify(chart.tea) %>,
+            backgroundColor: 'rgba(251, 188, 4, 0.7)',
+            borderColor: '#fbbc04',
+            borderWidth: 1,
+            borderRadius: 4
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'top' }
+        },
+        scales: {
+          x: { stacked: true, grid: { display: false } },
+          y: {
+            stacked: true,
+            beginAtZero: true,
+            ticks: {
+              callback: v => v.toLocaleString() + ' SSP'
+            }
+          }
+        }
+      }
+    });
+  </script>
+</body>
+</html>
