@@ -9,10 +9,12 @@
 </head>
 <body>
   <nav class="navbar">
-    <div class="navbar-brand">KO<span>VA</span> Sales</div>
+    <div class="navbar-brand">KO<span>VA</span> SALES</div>
     <ul class="navbar-nav">
       <li><a href="/dashboard" class="active">Dashboard</a></li>
       <li><a href="/sales">Sales</a></li>
+      <li><a href="/stock">Stock</a></li>
+      <li><a href="/notes">Notes</a></li>
       <li><a href="/reports">Reports</a></li>
       <% if (user.role === 'admin') { %>
         <li><a href="/workers">Workers</a></li>
@@ -26,7 +28,7 @@
   <div class="container">
     <h1 class="page-title">Sales Dashboard</h1>
 
-    <h3 style="font-size:14px;color:var(--text-secondary);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px;">Today's Performance</h3>
+    <h3 style="font-size:14px;color:var(--ink-faint);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px;">Today's Performance</h3>
     <div class="stats-grid">
       <div class="stat-card">
         <div class="label">Total Revenue Today</div>
@@ -47,7 +49,7 @@
       </div>
     </div>
 
-    <h3 style="font-size:14px;color:var(--text-secondary);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px;">This Week (Last 7 Days)</h3>
+    <h3 style="font-size:14px;color:var(--ink-faint);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px;">This Week (Last 7 Days)</h3>
     <div class="stats-grid">
       <div class="stat-card">
         <div class="label">Weekly Revenue</div>
@@ -68,7 +70,7 @@
       </div>
     </div>
 
-    <h3 style="font-size:14px;color:var(--text-secondary);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px;">This Month</h3>
+    <h3 style="font-size:14px;color:var(--ink-faint);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px;">This Month</h3>
     <div class="stats-grid">
       <div class="stat-card">
         <div class="label">Monthly Revenue</div>
@@ -89,6 +91,29 @@
       </div>
     </div>
 
+    <% if (stock.total > 0) { %>
+    <h3 style="font-size:14px;color:var(--ink-faint);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px;">Yogurt Stock</h3>
+    <div class="stats-grid" style="grid-template-columns: 1fr 2fr;">
+      <div class="stat-card" style="border-left:3px solid <%= stock.remaining > stock.total * 0.3 ? 'var(--yogurt)' : 'var(--danger)' %>;">
+        <div class="label">Remaining Cups</div>
+        <div class="value"><%= stock.remaining %> <span class="currency">/ <%= stock.total %></span></div>
+        <div class="sub">= <%= (stock.remaining * 400 / 1000).toFixed(1) %>L of <%= (stock.total * 400 / 1000).toFixed(0) %>L</div>
+      </div>
+      <div class="stat-card">
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-family:'Inter',sans-serif;font-size:11px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:1px;">
+          <span>Consumption</span>
+          <span><%= stock.total > 0 ? Math.round((stock.total - stock.remaining) / stock.total * 100) : 0 %>% used</span>
+        </div>
+        <div style="height:8px;background:var(--rule-light);width:100%;">
+          <div style="height:100%;background:<%= stock.remaining > stock.total * 0.3 ? 'var(--yogurt)' : 'var(--danger)' %>;width:<%= stock.total > 0 ? Math.round(stock.remaining / stock.total * 100) : 0 %>%;transition:width 0.3s;"></div>
+        </div>
+        <div style="text-align:center;margin-top:12px;">
+          <a href="/stock" class="btn btn-outline btn-sm">Manage Stock</a>
+        </div>
+      </div>
+    </div>
+    <% } %>
+
     <div class="grid-2">
       <div class="card">
         <div class="card-header">Daily Revenue (Last 7 Days)</div>
@@ -99,7 +124,7 @@
       <div class="card">
         <div class="card-header">Recent Transactions</div>
         <% if (recentSales.length === 0) { %>
-          <p style="color:var(--text-secondary);text-align:center;padding:40px 0;">No sales recorded yet. <a href="/sales">Add your first sale</a></p>
+          <p style="color:var(--ink-faint);text-align:center;padding:40px 0;">No sales recorded yet. <a href="/sales">Add your first sale</a></p>
         <% } else { %>
           <table>
             <thead>

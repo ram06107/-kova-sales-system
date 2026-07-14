@@ -11,6 +11,9 @@
   --accent: #8b6914;
   --danger: #993333;
   --paper: #faf8f3;
+  --yogurt: #4a6a3a;
+  --tea: #8a6b20;
+  --ink-mid: #555;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }

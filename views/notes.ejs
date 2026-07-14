@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Notes - KOVA Sales</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-brand">KO<span>VA</span> SALES</div>
+    <ul class="navbar-nav">
+      <li><a href="/dashboard">Dashboard</a></li>
+      <li><a href="/sales">Sales</a></li>
+      <li><a href="/stock">Stock</a></li>
+      <li><a href="/notes" class="active">Notes</a></li>
+      <li><a href="/reports">Reports</a></li>
+      <% if (user.role === 'admin') { %>
+        <li><a href="/workers">Workers</a></li>
+      <% } %>
+      <li><a href="/profile">Profile</a></li>
+      <li class="user-info">Hello, <strong><%= user.fullName %></strong></li>
+      <li><a href="/auth/logout">Logout</a></li>
+    </ul>
+  </nav>
+
+  <div class="container">
+    <h1 class="page-title">Daily Report Notes</h1>
+
+    <div class="card">
+      <div class="card-header">Post a Note</div>
+      <form method="POST" action="/notes/add">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Date</label>
+            <input type="date" name="note_date" value="<%= new Date().toISOString().slice(0, 10) %>" required>
+          </div>
+          <div class="form-group" style="flex:2;">
+            <label>Title</label>
+            <input type="text" name="title" placeholder="e.g. Morning shift summary" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Content</label>
+          <textarea name="content" rows="4" placeholder="Write your daily report or message here..." required></textarea>
+        </div>
+        <button type="submit" class="btn btn-success">Post Note</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <div class="card-header">All Notes</div>
+      <% if (notes.length === 0) { %>
+        <p style="font-family:'Inter',sans-serif;font-size:12px;color:var(--ink-faint);text-align:center;padding:32px 0;">No notes posted yet.</p>
+      <% } else { %>
+        <% notes.forEach(note => { %>
+          <div class="card" style="margin-bottom:12px;background:var(--surface);">
+            <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:8px;">
+              <div>
+                <strong style="font-family:'Libre Baskerville',serif;font-size:15px;"><%= note.title %></strong>
+                <span style="font-family:'Inter',sans-serif;font-size:11px;color:var(--ink-faint);margin-left:8px;">
+                  <%= note.note_date %> &mdash; <%= note.full_name %>
+                </span>
+              </div>
+              <% if (note.user_id === user.userId || user.role === 'admin') { %>
+                <form method="POST" action="/notes/delete/<%= note.id %>" onsubmit="return confirm('Delete this note?');" style="display:inline;">
+                  <button type="submit" style="background:none;border:none;cursor:pointer;color:var(--danger);font-family:'Inter',sans-serif;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Delete</button>
+                </form>
+              <% } %>
+            </div>
+            <div style="white-space:pre-wrap;font-family:'Inter',sans-serif;font-size:13px;line-height:1.6;color:var(--ink-mid);"><%= note.content %></div>
+          </div>
+        <% }) %>
+      <% } %>
+    </div>
+  </div>
+</body>
+</html>

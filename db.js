@@ -126,6 +126,77 @@ const db = {
     }
   },
 
+  stock: {
+    async getAll() {
+      const { data } = await supabase.from('stock').select('*').order('created_at', { ascending: false });
+      return data || [];
+    },
+    async getActive() {
+      const { data } = await supabase.from('stock').select('*').gt('remaining_cups', 0).order('created_at', { ascending: false });
+      return data || [];
+    },
+    async addContainer(userId, cups) {
+      const { data, error } = await supabase.from('stock').insert({
+        product_type: 'yogurt',
+        container_size_liters: 20,
+        ml_per_cup: 400,
+        cups_per_container: 50,
+        total_cups: cups || 50,
+        remaining_cups: cups || 50,
+        added_by: userId
+      }).select().single();
+      if (error) throw error;
+      return data;
+    },
+    async deductCups(count) {
+      if (count < 0) {
+        const { data: active } = await supabase.from('stock').select('*').order('created_at', { ascending: false }).limit(1);
+        if (active && active.length > 0) {
+          await supabase.from('stock').update({ remaining_cups: active[0].remaining_cups + Math.abs(count) }).eq('id', active[0].id);
+        }
+        return 0;
+      }
+      const { data: active } = await supabase.from('stock').select('*').gt('remaining_cups', 0).order('created_at');
+      let remaining = count;
+      for (const container of (active || [])) {
+        if (remaining <= 0) break;
+        const deduct = Math.min(container.remaining_cups, remaining);
+        const newRemaining = container.remaining_cups - deduct;
+        await supabase.from('stock').update({ remaining_cups: newRemaining }).eq('id', container.id);
+        remaining -= deduct;
+      }
+      return remaining;
+    },
+    async totalRemaining() {
+      const { data } = await supabase.from('stock').select('remaining_cups');
+      return (data || []).reduce((sum, s) => sum + s.remaining_cups, 0);
+    },
+    async totalStocked() {
+      const { data } = await supabase.from('stock').select('total_cups');
+      return (data || []).reduce((sum, s) => sum + s.total_cups, 0);
+    }
+  },
+
+  notes: {
+    async getAll(limit = 50) {
+      const { data } = await supabase.from('notes').select('*').order('created_at', { ascending: false }).limit(limit);
+      const { data: users } = await supabase.from('users').select('id, full_name');
+      const userMap = {};
+      (users || []).forEach(u => userMap[u.id] = u.full_name);
+      return (data || []).map(n => ({ ...n, full_name: userMap[n.user_id] || 'Unknown' }));
+    },
+    async create(userId, title, content, noteDate) {
+      const { data, error } = await supabase.from('notes').insert({
+        user_id: userId, title, content, note_date: noteDate || new Date().toISOString().slice(0, 10)
+      }).select().single();
+      if (error) throw error;
+      return data;
+    },
+    async delete(id) {
+      await supabase.from('notes').delete().eq('id', id);
+    }
+  },
+
   activity: {
     async log(userId, action, details) {
       await supabase.from('activity_log').insert({ user_id: userId, action, details });

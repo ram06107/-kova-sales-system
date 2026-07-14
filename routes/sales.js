@@ -23,7 +23,10 @@ router.get('/', async (req, res) => {
     return acc;
   }, { total: 0, qty: 0 });
 
-  res.render('sales', { sales, workers, filters, totals, user: req.session });
+  let stockRemaining = 0;
+  try { stockRemaining = await db.stock.totalRemaining(); } catch(e) {}
+
+  res.render('sales', { sales, workers, filters, totals, user: req.session, stockRemaining });
 });
 
 router.get('/csv', async (req, res) => {
@@ -78,7 +81,9 @@ router.post('/add', async (req, res) => {
   if (!product || !quantity || !unit_price || !sale_date) {
     const sales = await db.sales.getAll(200);
     const workers = await db.users.getAll();
-    return res.render('sales', { sales, workers, filters: {}, totals: { total: 0, qty: 0 }, user: req.session, error: 'All fields are required' });
+    let stockRemaining = 0;
+    try { stockRemaining = await db.stock.totalRemaining(); } catch(e) {}
+    return res.render('sales', { sales, workers, filters: {}, totals: { total: 0, qty: 0 }, user: req.session, error: 'All fields are required', stockRemaining });
   }
 
   const qty = parseInt(quantity);
@@ -86,6 +91,14 @@ router.post('/add', async (req, res) => {
   const total = qty * price;
 
   await db.sales.create(req.session.userId, product, qty, price, total, sale_date);
+
+  if (product === 'yogurt' && qty > 0) {
+    const leftover = await db.stock.deductCups(qty);
+    if (leftover > 0) {
+      await db.activity.log(req.session.userId, 'stock_warning', 'Stock short by ' + leftover + ' cups');
+    }
+  }
+
   await db.activity.log(req.session.userId, 'added_sale', `Added ${product} x${qty} for ${total} SSP`);
   return res.redirect('/sales');
 });
@@ -94,6 +107,9 @@ router.post('/delete/:id', async (req, res) => {
   const id = parseInt(req.params.id);
   const sale = await db.sales.findById(id);
   if (sale && (sale.user_id === req.session.userId || req.session.role === 'admin')) {
+    if (sale.product === 'yogurt' && sale.quantity > 0) {
+      await db.stock.deductCups(-sale.quantity);
+    }
     await db.sales.delete(id);
     await db.activity.log(req.session.userId, 'deleted_sale', `Deleted sale #${id}`);
   }

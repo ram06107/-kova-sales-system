@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stock - KOVA Sales</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-brand">KO<span>VA</span> SALES</div>
+    <ul class="navbar-nav">
+      <li><a href="/dashboard">Dashboard</a></li>
+      <li><a href="/sales">Sales</a></li>
+      <li><a href="/stock" class="active">Stock</a></li>
+      <li><a href="/notes">Notes</a></li>
+      <li><a href="/reports">Reports</a></li>
+      <% if (user.role === 'admin') { %>
+        <li><a href="/workers">Workers</a></li>
+      <% } %>
+      <li><a href="/profile">Profile</a></li>
+      <li class="user-info">Hello, <strong><%= user.fullName %></strong></li>
+      <li><a href="/auth/logout">Logout</a></li>
+    </ul>
+  </nav>
+
+  <div class="container">
+    <h1 class="page-title">Yogurt Stock Management</h1>
+
+    <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom:24px;">
+      <div class="stat-card">
+        <div class="label">Total Stocked</div>
+        <div class="value"><%= totalStocked %> <span class="currency">cups</span></div>
+        <div class="sub">= <%= (totalStocked * 400 / 1000).toFixed(0) %> Liters</div>
+      </div>
+      <div class="stat-card" style="border-left:3px solid var(--yogurt);">
+        <div class="label">Remaining</div>
+        <div class="value"><%= totalRemaining %> <span class="currency">cups</span></div>
+        <div class="sub">= <%= (totalRemaining * 400 / 1000).toFixed(1) %> Liters</div>
+      </div>
+      <div class="stat-card" style="border-left:3px solid var(--danger);">
+        <div class="label">Used / Sold</div>
+        <div class="value"><%= totalStocked - totalRemaining %> <span class="currency">cups</span></div>
+        <div class="sub"><%= totalStocked > 0 ? Math.round((totalStocked - totalRemaining) / totalStocked * 100) : 0 %>% consumed</div>
+      </div>
+    </div>
+
+    <% if (totalStocked > 0) { %>
+      <div style="background:var(--surface);border:1px solid var(--rule);padding:16px 20px;margin-bottom:20px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-family:'Inter',sans-serif;font-size:11px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:1px;">
+          <span>Stock Level</span>
+          <span><%= totalRemaining %> / <%= totalStocked %> cups</span>
+        </div>
+        <div style="height:8px;background:var(--rule-light);width:100%;position:relative;">
+          <div style="height:100%;background:<%= totalStocked > 0 && totalRemaining / totalStocked > 0.3 ? 'var(--yogurt)' : 'var(--danger)' %>;width:<%= totalStocked > 0 ? Math.round(totalRemaining / totalStocked * 100) : 0 %>%;transition:width 0.3s;"></div>
+        </div>
+      </div>
+    <% } %>
+
+    <div class="card">
+      <div class="card-header">Add Yogurt Container</div>
+      <p style="font-family:'Inter',sans-serif;font-size:12px;color:var(--ink-faint);margin-bottom:14px;">Each container = 20L = 50 cups (400ml each). Designed for 2-week consumption cycle.</p>
+      <form method="POST" action="/stock/add" style="display:flex;gap:12px;align-items:end;">
+        <div class="form-group" style="flex:1;max-width:200px;">
+          <label>Cups per container</label>
+          <input type="number" name="cups" value="50" min="1" required>
+        </div>
+        <button type="submit" class="btn btn-success">Add Container</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <div class="card-header">Stock History</div>
+      <% if (stock.length === 0) { %>
+        <p style="font-family:'Inter',sans-serif;font-size:12px;color:var(--ink-faint);text-align:center;padding:32px 0;">No stock containers recorded yet.</p>
+      <% } else { %>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Date Added</th>
+                <th>Type</th>
+                <th>Total Cups</th>
+                <th>Remaining</th>
+                <th>Consumed</th>
+                <th>Added By</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% stock.forEach(s => { %>
+                <tr>
+                  <td><%= new Date(s.created_at).toLocaleDateString('en-GB') %></td>
+                  <td><%= s.container_size_liters %>L / <%= s.cups_per_container %> cups</td>
+                  <td><%= s.total_cups %></td>
+                  <td><strong><%= s.remaining_cups %></strong></td>
+                  <td><%= s.total_cups - s.remaining_cups %> (<%= s.total_cups > 0 ? Math.round((s.total_cups - s.remaining_cups) / s.total_cups * 100) : 0 %>%)</td>
+                  <td><%= user.fullName %></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </div>
+  </div>
+</body>
+</html>

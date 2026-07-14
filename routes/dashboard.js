@@ -73,6 +73,8 @@ router.get('/', async (req, res) => {
   }
 
   const recentSales = await db.sales.recent(5);
+  const stockRemaining = await db.stock.totalRemaining();
+  const stockTotal = await db.stock.totalStocked();
 
   res.render('dashboard', {
     user: req.session,
@@ -80,7 +82,8 @@ router.get('/', async (req, res) => {
     weekly: { yogurt: weeklyYogurt, tea: weeklyTea, total: weeklyTotal, growth: weeklyGrowth },
     monthly: { yogurt: monthlyYogurt, tea: monthlyTea, total: monthlyTotal, growth: monthlyGrowth, lastMonthTotal },
     chart: { labels: chartLabels, yogurt: chartYogurt, tea: chartTea },
-    recentSales
+    recentSales,
+    stock: { remaining: stockRemaining, total: stockTotal }
   });
 });
 

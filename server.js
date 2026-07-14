@@ -36,6 +36,8 @@ async function start() {
   app.use('/reports', require('./routes/reports'));
   app.use('/workers', require('./routes/workers'));
   app.use('/profile', require('./routes/profile'));
+  app.use('/stock', require('./routes/stock'));
+  app.use('/notes', require('./routes/notes'));
 
   app.get('/', (req, res) => {
     if (req.session && req.session.userId) {
