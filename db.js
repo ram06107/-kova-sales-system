@@ -2,13 +2,18 @@ const initSqlJs = require('sql.js');
 const fs = require('fs');
 const path = require('path');
 
-const dbPath = path.join(__dirname, 'kova_sales.db');
+const dbDir = process.env.RENDER ? '/tmp' : __dirname;
+const dbPath = path.join(dbDir, 'kova_sales.db');
 let _db = null;
 
 function saveToDisk() {
   if (_db) {
-    const data = _db.export();
-    fs.writeFileSync(dbPath, Buffer.from(data));
+    try {
+      const data = _db.export();
+      fs.writeFileSync(dbPath, Buffer.from(data));
+    } catch (e) {
+      console.error('Failed to save database:', e.message);
+    }
   }
 }
 
@@ -63,7 +68,11 @@ const wrapper = {
 let ready = false;
 
 async function initDB() {
-  const SQL = await initSqlJs();
+  const sqlWasm = path.join(__dirname, 'node_modules', 'sql.js', 'dist', 'sql-wasm.wasm');
+  const SQL = await initSqlJs({
+    locateFile: () => sqlWasm
+  });
+
   if (fs.existsSync(dbPath)) {
     const fileBuffer = fs.readFileSync(dbPath);
     _db = new SQL.Database(fileBuffer);
@@ -71,7 +80,6 @@ async function initDB() {
     _db = new SQL.Database();
   }
 
-  wrapper.pragma('journal_mode = WAL');
   wrapper.pragma('foreign_keys = ON');
 
   wrapper.exec(`
@@ -104,6 +112,7 @@ async function initDB() {
   `);
 
   ready = true;
+  console.log('  Database ready at:', dbPath);
   return wrapper;
 }
 
