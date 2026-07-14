@@ -23,26 +23,26 @@ function getWeekRange(offset = 0) {
   };
 }
 
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   const weeks = [];
   for (let i = 0; i < 4; i++) {
     const w = getWeekRange(i);
-    const yogurt = db.sales.sumByProduct('yogurt', w.start, w.end);
-    const tea = db.sales.sumByProduct('tea', w.start, w.end);
+    const yogurt = await db.sales.sumByProduct('yogurt', w.start, w.end);
+    const tea = await db.sales.sumByProduct('tea', w.start, w.end);
     weeks.push({ start: w.start, end: w.end, label: w.label, yogurt, tea, grandTotal: yogurt.total + tea.total });
   }
   res.render('reports', { weeks, user: req.session });
 });
 
-router.get('/pdf/:weekOffset', (req, res) => {
+router.get('/pdf/:weekOffset', async (req, res) => {
   const offset = parseInt(req.params.weekOffset) || 0;
   const week = getWeekRange(offset);
 
-  const yogurt = db.sales.sumByProductGrouped('yogurt', week.start, week.end);
-  const tea = db.sales.sumByProductGrouped('tea', week.start, week.end);
-  const yogurtTotals = db.sales.sumByProduct('yogurt', week.start, week.end);
-  const teaTotals = db.sales.sumByProduct('tea', week.start, week.end);
-  const allSales = db.sales.allInRange(week.start, week.end);
+  const yogurt = await db.sales.sumByProductGrouped('yogurt', week.start, week.end);
+  const tea = await db.sales.sumByProductGrouped('tea', week.start, week.end);
+  const yogurtTotals = await db.sales.sumByProduct('yogurt', week.start, week.end);
+  const teaTotals = await db.sales.sumByProduct('tea', week.start, week.end);
+  const allSales = await db.sales.allInRange(week.start, week.end);
 
   const doc = new PDFDocument({ margin: 40, size: 'A4' });
   res.setHeader('Content-Type', 'application/pdf');

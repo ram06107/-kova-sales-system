@@ -8,9 +8,9 @@ router.get('/login', (req, res) => {
   res.render('login', { error: null });
 });
 
-router.post('/login', (req, res) => {
+router.post('/login', async (req, res) => {
   const { username, password } = req.body;
-  const user = db.users.findByUsername(username);
+  const user = await db.users.findByUsername(username);
 
   if (!user || !bcrypt.compareSync(password, user.password)) {
     return res.render('login', { error: 'Invalid username or password' });
@@ -28,7 +28,7 @@ router.get('/register', (req, res) => {
   res.render('register', { error: null });
 });
 
-router.post('/register', (req, res) => {
+router.post('/register', async (req, res) => {
   const { username, password, confirm_password, full_name } = req.body;
 
   if (!username || !password || !full_name) {
@@ -43,13 +43,13 @@ router.post('/register', (req, res) => {
     return res.render('register', { error: 'Password must be at least 6 characters' });
   }
 
-  const existing = db.users.findByUsername(username);
+  const existing = await db.users.findByUsername(username);
   if (existing) {
     return res.render('register', { error: 'Username already taken' });
   }
 
   const hash = bcrypt.hashSync(password, 10);
-  db.users.create(username, hash, full_name, 'worker');
+  await db.users.create(username, hash, full_name, 'worker');
 
   return res.redirect('/auth/login');
 });

@@ -5,16 +5,16 @@ const { requireAuth } = require('../middleware/auth');
 const router = express.Router();
 router.use(requireAuth);
 
-router.get('/', (req, res) => {
-  const sales = db.sales.getAll(200);
+router.get('/', async (req, res) => {
+  const sales = await db.sales.getAll(200);
   res.render('sales', { sales, user: req.session });
 });
 
-router.post('/add', (req, res) => {
+router.post('/add', async (req, res) => {
   const { product, quantity, unit_price, sale_date } = req.body;
 
   if (!product || !quantity || !unit_price || !sale_date) {
-    const sales = db.sales.getAll(200);
+    const sales = await db.sales.getAll(200);
     return res.render('sales', { sales, user: req.session, error: 'All fields are required' });
   }
 
@@ -22,15 +22,15 @@ router.post('/add', (req, res) => {
   const price = parseFloat(unit_price);
   const total = qty * price;
 
-  db.sales.create(req.session.userId, product, qty, price, total, sale_date);
+  await db.sales.create(req.session.userId, product, qty, price, total, sale_date);
 
   return res.redirect('/sales');
 });
 
-router.post('/delete/:id', (req, res) => {
-  const sale = db.sales.findById(parseInt(req.params.id));
+router.post('/delete/:id', async (req, res) => {
+  const sale = await db.sales.findById(parseInt(req.params.id));
   if (sale && (sale.user_id === req.session.userId || req.session.role === 'admin')) {
-    db.sales.delete(parseInt(req.params.id));
+    await db.sales.delete(parseInt(req.params.id));
   }
   return res.redirect('/sales');
 });

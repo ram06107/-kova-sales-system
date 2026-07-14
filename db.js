@@ -1,184 +1,125 @@
-const fs = require('fs');
-const path = require('path');
+const { createClient } = require('@supabase/supabase-js');
 const bcrypt = require('bcryptjs');
 
-const DB_DIR = process.env.RENDER ? '/tmp' : __dirname;
-const DB_FILE = path.join(DB_DIR, 'kova_data.json');
+const supabaseUrl = 'https://eykguplyjsfquxbpelrp.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV5a2d1cGx5anNmcXV4YnBlbHJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQwMjQ0NTQsImV4cCI6MjA5OTYwMDQ1NH0.2mEI9XfAV0WdLjXajU-FWRQ36zEzFmRhxEZvnUdCS6U';
 
-let data = { users: [], sales: [], sessions: [], _ids: { users: 0, sales: 0 } };
-
-function load() {
-  try {
-    if (fs.existsSync(DB_FILE)) {
-      data = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
-    }
-  } catch (e) {
-    console.error('Failed to load database, starting fresh:', e.message);
-    data = { users: [], sales: [], sessions: [], _ids: { users: 0, sales: 0 } };
-  }
-}
-
-function save() {
-  try {
-    fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 0));
-  } catch (e) {
-    console.error('Failed to save database:', e.message);
-  }
-}
-
-function nextId(table) {
-  data._ids[table] = (data._ids[table] || 0) + 1;
-  return data._ids[table];
-}
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 const db = {
   users: {
-    findByUsername(username) {
-      return data.users.find(u => u.username === username) || null;
+    async findByUsername(username) {
+      const { data } = await supabase.from('users').select('*').eq('username', username).single();
+      return data;
     },
-    findById(id) {
-      return data.users.find(u => u.id === id) || null;
+    async findById(id) {
+      const { data } = await supabase.from('users').select('*').eq('id', id).single();
+      return data;
     },
-    count() {
-      return data.users.length;
+    async count() {
+      const { count } = await supabase.from('users').select('*', { count: 'exact', head: true });
+      return count || 0;
     },
-    create(username, password, fullName, role) {
-      const user = {
-        id: nextId('users'),
-        username,
-        password,
-        full_name: fullName,
-        role: role || 'worker',
-        created_at: new Date().toISOString()
-      };
-      data.users.push(user);
-      save();
-      return user;
+    async create(username, password, fullName, role) {
+      const { data, error } = await supabase.from('users').insert({
+        username, password, full_name: fullName, role: role || 'worker'
+      }).select().single();
+      if (error) throw error;
+      return data;
     }
   },
+
   sales: {
-    getAll(limit = 200) {
-      return data.sales
-        .sort((a, b) => (b.sale_date + b.created_at).localeCompare(a.sale_date + a.created_at))
-        .slice(0, limit)
-        .map(s => {
-          const user = data.users.find(u => u.id === s.user_id);
-          return { ...s, full_name: user ? user.full_name : 'Unknown' };
-        });
+    async getAll(limit = 200) {
+      const { data: sales } = await supabase.from('sales').select('*').order('sale_date', { ascending: false }).order('created_at', { ascending: false }).limit(limit);
+      const { data: users } = await supabase.from('users').select('id, full_name');
+      const userMap = {};
+      (users || []).forEach(u => userMap[u.id] = u.full_name);
+      return (sales || []).map(s => ({ ...s, full_name: userMap[s.user_id] || 'Unknown' }));
     },
-    findById(id) {
-      return data.sales.find(s => s.id === id) || null;
+    async findById(id) {
+      const { data } = await supabase.from('sales').select('*').eq('id', id).single();
+      return data;
     },
-    create(userId, product, quantity, unitPrice, totalAmount, saleDate) {
-      const sale = {
-        id: nextId('sales'),
-        user_id: userId,
-        product,
-        quantity,
-        unit_price: unitPrice,
-        total_amount: totalAmount,
-        sale_date: saleDate,
-        created_at: new Date().toISOString()
-      };
-      data.sales.push(sale);
-      save();
-      return sale;
+    async create(userId, product, quantity, unitPrice, totalAmount, saleDate) {
+      const { data, error } = await supabase.from('sales').insert({
+        user_id: userId, product, quantity, unit_price: unitPrice, total_amount: totalAmount, sale_date: saleDate
+      }).select().single();
+      if (error) throw error;
+      return data;
     },
-    delete(id) {
-      data.sales = data.sales.filter(s => s.id !== id);
-      save();
+    async delete(id) {
+      await supabase.from('sales').delete().eq('id', id);
     },
-    sumByProduct(product, startDate, endDate) {
-      const filtered = data.sales.filter(s =>
-        s.product === product && s.sale_date >= startDate && s.sale_date <= endDate
-      );
-      const total = filtered.reduce((sum, s) => sum + s.total_amount, 0);
-      const qty = filtered.reduce((sum, s) => sum + s.quantity, 0);
+    async sumByProduct(product, startDate, endDate) {
+      const { data } = await supabase.from('sales').select('quantity, total_amount').eq('product', product).gte('sale_date', startDate).lte('sale_date', endDate);
+      let total = 0, qty = 0;
+      (data || []).forEach(s => { total += Number(s.total_amount); qty += s.quantity; });
       return { total, qty };
     },
-    sumAll(startDate, endDate) {
-      const filtered = data.sales.filter(s =>
-        s.sale_date >= startDate && s.sale_date <= endDate
-      );
-      return filtered.reduce((sum, s) => sum + s.total_amount, 0);
+    async sumAll(startDate, endDate) {
+      const { data } = await supabase.from('sales').select('total_amount').gte('sale_date', startDate).lte('sale_date', endDate);
+      return (data || []).reduce((sum, s) => sum + Number(s.total_amount), 0);
     },
-    sumByProductGrouped(product, startDate, endDate) {
-      return data.sales
-        .filter(s => s.product === product && s.sale_date >= startDate && s.sale_date <= endDate)
-        .reduce((acc, s) => {
-          const existing = acc.find(r => r.sale_date === s.sale_date);
-          if (existing) {
-            existing.qty += s.quantity;
-            existing.total += s.total_amount;
-          } else {
-            acc.push({ sale_date: s.sale_date, qty: s.quantity, total: s.total_amount });
-          }
-          return acc;
-        }, [])
-        .sort((a, b) => a.sale_date.localeCompare(b.sale_date));
+    async sumByProductGrouped(product, startDate, endDate) {
+      const { data } = await supabase.from('sales').select('sale_date, quantity, total_amount').eq('product', product).gte('sale_date', startDate).lte('sale_date', endDate).order('sale_date');
+      const grouped = {};
+      (data || []).forEach(s => {
+        if (!grouped[s.sale_date]) grouped[s.sale_date] = { sale_date: s.sale_date, qty: 0, total: 0 };
+        grouped[s.sale_date].qty += s.quantity;
+        grouped[s.sale_date].total += Number(s.total_amount);
+      });
+      return Object.values(grouped);
     },
-    allInRange(startDate, endDate) {
-      return data.sales
-        .filter(s => s.sale_date >= startDate && s.sale_date <= endDate)
-        .sort((a, b) => (a.sale_date + a.created_at).localeCompare(b.sale_date + b.created_at))
-        .map(s => {
-          const user = data.users.find(u => u.id === s.user_id);
-          return { ...s, full_name: user ? user.full_name : 'Unknown' };
-        });
+    async allInRange(startDate, endDate) {
+      const { data: sales } = await supabase.from('sales').select('*').gte('sale_date', startDate).lte('sale_date', endDate).order('sale_date').order('created_at');
+      const { data: users } = await supabase.from('users').select('id, full_name');
+      const userMap = {};
+      (users || []).forEach(u => userMap[u.id] = u.full_name);
+      return (sales || []).map(s => ({ ...s, full_name: userMap[s.user_id] || 'Unknown' }));
     },
-    recent(count = 5) {
-      return data.sales
-        .sort((a, b) => (b.created_at).localeCompare(a.created_at))
-        .slice(0, count)
-        .map(s => {
-          const user = data.users.find(u => u.id === s.user_id);
-          return { ...s, full_name: user ? user.full_name : 'Unknown' };
-        });
+    async recent(count = 5) {
+      const { data: sales } = await supabase.from('sales').select('*').order('created_at', { ascending: false }).limit(count);
+      const { data: users } = await supabase.from('users').select('id, full_name');
+      const userMap = {};
+      (users || []).forEach(u => userMap[u.id] = u.full_name);
+      return (sales || []).map(s => ({ ...s, full_name: userMap[s.user_id] || 'Unknown' }));
     }
   },
+
   sessions: {
-    get(sid) {
-      const s = data.sessions.find(x => x.sid === sid);
-      if (!s) return null;
-      if (new Date(s.expires_at) < new Date()) {
-        this.destroy(sid);
+    async get(sid) {
+      const { data } = await supabase.from('sessions').select('data, expires_at').eq('sid', sid).single();
+      if (!data) return null;
+      if (new Date(data.expires_at) < new Date()) {
+        await this.destroy(sid);
         return null;
       }
-      return JSON.parse(s.data);
+      return data.data;
     },
-    set(sid, sessionData, expiresAt) {
-      const idx = data.sessions.findIndex(x => x.sid === sid);
-      const entry = { sid, data: JSON.stringify(sessionData), expires_at: expiresAt };
-      if (idx >= 0) {
-        data.sessions[idx] = entry;
-      } else {
-        data.sessions.push(entry);
-      }
-      save();
+    async set(sid, sessionData, expiresAt) {
+      await supabase.from('sessions').upsert({ sid, data: sessionData, expires_at: expiresAt });
     },
-    destroy(sid) {
-      data.sessions = data.sessions.filter(x => x.sid !== sid);
-      save();
+    async destroy(sid) {
+      await supabase.from('sessions').delete().eq('sid', sid);
     },
-    cleanup() {
-      const now = new Date().toISOString();
-      data.sessions = data.sessions.filter(x => x.expires_at > now);
-      save();
+    async cleanup() {
+      await supabase.from('sessions').delete().lt('expires_at', new Date().toISOString());
     }
   }
 };
 
-function initApp() {
-  load();
-  db.sessions.cleanup();
+async function initApp() {
+  await db.sessions.cleanup();
 
-  if (db.users.count() === 0) {
+  const userCount = await db.users.count();
+  if (userCount === 0) {
     const hash = bcrypt.hashSync('admin123', 10);
-    db.users.create('admin', hash, 'Administrator', 'admin');
+    await db.users.create('admin', hash, 'Administrator', 'admin');
     console.log('Default admin account created — Username: admin / Password: admin123');
   }
 
-  console.log('Database ready at:', DB_FILE);
+  console.log('Database connected to Supabase');
 }
 
 module.exports = { db, initApp };
