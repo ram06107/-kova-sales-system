@@ -69,6 +69,24 @@
       </form>
     </div>
 
+    <% if (typeof editItem !== 'undefined' && editItem) { %>
+    <div class="card" style="border:2px solid var(--accent);margin-bottom:16px;">
+      <div class="card-header">Edit Container #<%= editItem.id %></div>
+      <form method="POST" action="/stock/edit/<%= editItem.id %>" style="display:flex;gap:12px;align-items:end;">
+        <div class="form-group" style="flex:1;max-width:200px;">
+          <label>Total Cups</label>
+          <input type="number" name="total_cups" value="<%= editItem.total_cups %>" min="1" required>
+        </div>
+        <div class="form-group" style="flex:1;max-width:200px;">
+          <label>Remaining Cups</label>
+          <input type="number" name="remaining_cups" value="<%= editItem.remaining_cups %>" min="0" required>
+        </div>
+        <button type="submit" class="btn btn-success">Save</button>
+        <a href="/stock" class="btn btn-outline">Cancel</a>
+      </form>
+    </div>
+    <% } %>
+
     <div class="card">
       <div class="card-header">Stock History</div>
       <% if (stock.length === 0) { %>
@@ -83,7 +101,7 @@
                 <th>Total Cups</th>
                 <th>Remaining</th>
                 <th>Consumed</th>
-                <th>Added By</th>
+                <% if (user.role === 'admin') { %><th>Actions</th><% } %>
               </tr>
             </thead>
             <tbody>
@@ -94,7 +112,14 @@
                   <td><%= s.total_cups %></td>
                   <td><strong><%= s.remaining_cups %></strong></td>
                   <td><%= s.total_cups - s.remaining_cups %> (<%= s.total_cups > 0 ? Math.round((s.total_cups - s.remaining_cups) / s.total_cups * 100) : 0 %>%)</td>
-                  <td><%= user.fullName %></td>
+                  <% if (user.role === 'admin') { %>
+                    <td style="white-space:nowrap;">
+                      <a href="/stock/edit/<%= s.id %>" style="color:var(--accent);font-family:'Inter',sans-serif;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;margin-right:10px;">Edit</a>
+                      <form method="POST" action="/stock/delete/<%= s.id %>" style="display:inline;" onsubmit="return confirm('Delete this container?');">
+                        <button type="submit" style="background:none;border:none;cursor:pointer;color:var(--danger);font-family:'Inter',sans-serif;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;">Delete</button>
+                      </form>
+                    </td>
+                  <% } %>
                 </tr>
               <% }) %>
             </tbody>

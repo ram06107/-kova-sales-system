@@ -174,6 +174,13 @@ const db = {
     async totalStocked() {
       const { data } = await supabase.from('stock').select('total_cups');
       return (data || []).reduce((sum, s) => sum + s.total_cups, 0);
+    },
+    async update(id, fields) {
+      const { error } = await supabase.from('stock').update(fields).eq('id', id);
+      if (error) throw error;
+    },
+    async delete(id) {
+      await supabase.from('stock').delete().eq('id', id);
     }
   },
 
