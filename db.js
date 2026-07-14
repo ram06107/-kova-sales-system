@@ -9,11 +9,11 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 const db = {
   users: {
     async findByUsername(username) {
-      const { data } = await supabase.from('users').select('*').eq('username', username).single();
+      const { data, error } = await supabase.from('users').select('*').eq('username', username).maybeSingle();
       return data;
     },
     async findById(id) {
-      const { data } = await supabase.from('users').select('*').eq('id', id).single();
+      const { data, error } = await supabase.from('users').select('*').eq('id', id).maybeSingle();
       return data;
     },
     async count() {
@@ -89,7 +89,7 @@ const db = {
 
   sessions: {
     async get(sid) {
-      const { data } = await supabase.from('sessions').select('data, expires_at').eq('sid', sid).single();
+      const { data } = await supabase.from('sessions').select('data, expires_at').eq('sid', sid).maybeSingle();
       if (!data) return null;
       if (new Date(data.expires_at) < new Date()) {
         await this.destroy(sid);
@@ -110,13 +110,21 @@ const db = {
 };
 
 async function initApp() {
-  await db.sessions.cleanup();
+  try {
+    await db.sessions.cleanup();
+  } catch (e) {
+    console.log('Session cleanup skipped:', e.message);
+  }
 
-  const userCount = await db.users.count();
-  if (userCount === 0) {
-    const hash = bcrypt.hashSync('admin123', 10);
-    await db.users.create('admin', hash, 'Administrator', 'admin');
-    console.log('Default admin account created — Username: admin / Password: admin123');
+  try {
+    const userCount = await db.users.count();
+    if (userCount === 0) {
+      const hash = bcrypt.hashSync('admin123', 10);
+      await db.users.create('admin', hash, 'Administrator', 'admin');
+      console.log('Default admin account created');
+    }
+  } catch (e) {
+    console.log('Admin init:', e.message);
   }
 
   console.log('Database connected to Supabase');
