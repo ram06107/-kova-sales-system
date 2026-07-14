@@ -8,40 +8,34 @@ router.use(requireAuth);
 router.get('/', (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
 
-  // Daily stats
-  const dailyYogurt = db.prepare("SELECT COALESCE(SUM(total_amount),0) as total, COALESCE(SUM(quantity),0) as qty FROM sales WHERE product='yogurt' AND sale_date=?").get(today);
-  const dailyTea = db.prepare("SELECT COALESCE(SUM(total_amount),0) as total, COALESCE(SUM(quantity),0) as qty FROM sales WHERE product='tea' AND sale_date=?").get(today);
+  const dailyYogurt = db.sales.sumByProduct('yogurt', today, today);
+  const dailyTea = db.sales.sumByProduct('tea', today, today);
   const dailyTotal = dailyYogurt.total + dailyTea.total;
 
-  // Weekly stats (last 7 days)
   const weekStart = new Date();
   weekStart.setDate(weekStart.getDate() - 6);
   const weekStartStr = weekStart.toISOString().slice(0, 10);
-  const weeklyYogurt = db.prepare("SELECT COALESCE(SUM(total_amount),0) as total, COALESCE(SUM(quantity),0) as qty FROM sales WHERE product='yogurt' AND sale_date >= ? AND sale_date <= ?").get(weekStartStr, today);
-  const weeklyTea = db.prepare("SELECT COALESCE(SUM(total_amount),0) as total, COALESCE(SUM(quantity),0) as qty FROM sales WHERE product='tea' AND sale_date >= ? AND sale_date <= ?").get(weekStartStr, today);
+  const weeklyYogurt = db.sales.sumByProduct('yogurt', weekStartStr, today);
+  const weeklyTea = db.sales.sumByProduct('tea', weekStartStr, today);
   const weeklyTotal = weeklyYogurt.total + weeklyTea.total;
 
-  // Monthly stats
   const monthStart = today.slice(0, 7) + '-01';
-  const monthlyYogurt = db.prepare("SELECT COALESCE(SUM(total_amount),0) as total, COALESCE(SUM(quantity),0) as qty FROM sales WHERE product='yogurt' AND sale_date >= ? AND sale_date <= ?").get(monthStart, today);
-  const monthlyTea = db.prepare("SELECT COALESCE(SUM(total_amount),0) as total, COALESCE(SUM(quantity),0) as qty FROM sales WHERE product='tea' AND sale_date >= ? AND sale_date <= ?").get(monthStart, today);
+  const monthlyYogurt = db.sales.sumByProduct('yogurt', monthStart, today);
+  const monthlyTea = db.sales.sumByProduct('tea', monthStart, today);
   const monthlyTotal = monthlyYogurt.total + monthlyTea.total;
 
-  // Yesterday for growth comparison
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
   const yesterdayStr = yesterday.toISOString().slice(0, 10);
-  const yesterdayTotal = db.prepare("SELECT COALESCE(SUM(total_amount),0) as total FROM sales WHERE sale_date=?").get(yesterdayStr).total;
+  const yesterdayTotal = db.sales.sumAll(yesterdayStr, yesterdayStr);
   const dailyGrowth = yesterdayTotal > 0 ? ((dailyTotal - yesterdayTotal) / yesterdayTotal * 100).toFixed(1) : (dailyTotal > 0 ? 100 : 0);
 
-  // Last week same period for weekly growth comparison
   const twoWeeksAgo = new Date();
   twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 13);
   const twoWeeksAgoStr = twoWeeksAgo.toISOString().slice(0, 10);
-  const lastWeekTotal = db.prepare("SELECT COALESCE(SUM(total_amount),0) as total FROM sales WHERE sale_date >= ? AND sale_date < ?").get(twoWeeksAgoStr, weekStartStr).total;
+  const lastWeekTotal = db.sales.sumAll(twoWeeksAgoStr, weekStartStr);
   const weeklyGrowth = lastWeekTotal > 0 ? ((weeklyTotal - lastWeekTotal) / lastWeekTotal * 100).toFixed(1) : (weeklyTotal > 0 ? 100 : 0);
 
-  // Daily chart data (last 7 days)
   const chartLabels = [];
   const chartYogurt = [];
   const chartTea = [];
@@ -50,12 +44,11 @@ router.get('/', (req, res) => {
     d.setDate(d.getDate() - i);
     const ds = d.toISOString().slice(0, 10);
     chartLabels.push(d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' }));
-    chartYogurt.push(db.prepare("SELECT COALESCE(SUM(total_amount),0) as t FROM sales WHERE product='yogurt' AND sale_date=?").get(ds).t);
-    chartTea.push(db.prepare("SELECT COALESCE(SUM(total_amount),0) as t FROM sales WHERE product='tea' AND sale_date=?").get(ds).t);
+    chartYogurt.push(db.sales.sumByProduct('yogurt', ds, ds).total);
+    chartTea.push(db.sales.sumByProduct('tea', ds, ds).total);
   }
 
-  // Recent sales
-  const recentSales = db.prepare('SELECT s.*, u.full_name FROM sales s JOIN users u ON s.user_id = u.id ORDER BY s.created_at DESC LIMIT 5').all();
+  const recentSales = db.sales.recent(5);
 
   res.render('dashboard', {
     user: req.session,

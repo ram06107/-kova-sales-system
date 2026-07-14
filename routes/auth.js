@@ -10,7 +10,7 @@ router.get('/login', (req, res) => {
 
 router.post('/login', (req, res) => {
   const { username, password } = req.body;
-  const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
+  const user = db.users.findByUsername(username);
 
   if (!user || !bcrypt.compareSync(password, user.password)) {
     return res.render('login', { error: 'Invalid username or password' });
@@ -43,13 +43,13 @@ router.post('/register', (req, res) => {
     return res.render('register', { error: 'Password must be at least 6 characters' });
   }
 
-  const existing = db.prepare('SELECT id FROM users WHERE username = ?').get(username);
+  const existing = db.users.findByUsername(username);
   if (existing) {
     return res.render('register', { error: 'Username already taken' });
   }
 
   const hash = bcrypt.hashSync(password, 10);
-  db.prepare('INSERT INTO users (username, password, full_name, role) VALUES (?, ?, ?, ?)').run(username, hash, full_name, 'worker');
+  db.users.create(username, hash, full_name, 'worker');
 
   return res.redirect('/auth/login');
 });
