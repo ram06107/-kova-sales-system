@@ -1,11 +1,19 @@
 const express = require('express');
 const session = require('express-session');
 const path = require('path');
+const bcrypt = require('bcryptjs');
 const { db, initDB } = require('./db');
 const SQLiteSessionStore = require('./session-store');
 
 async function start() {
   await initDB();
+
+  const userCount = db.prepare('SELECT COUNT(*) as c FROM users').get().c;
+  if (userCount === 0) {
+    const hash = bcrypt.hashSync('admin123', 10);
+    db.prepare('INSERT INTO users (username, password, full_name, role) VALUES (?, ?, ?, ?)').run('admin', hash, 'Administrator', 'admin');
+    console.log('  Default admin account created — Username: admin / Password: admin123');
+  }
 
   const app = express();
   const PORT = process.env.PORT || 3000;
