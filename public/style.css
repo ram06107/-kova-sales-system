@@ -391,6 +391,16 @@ tr:hover { background: #f8f9fa; }
 @media (max-width: 480px) {
   .stats-grid { grid-template-columns: 1fr; }
   .form-grid { grid-template-columns: 1fr; }
+  .stat-card .value { font-size: 22px; }
+  .navbar-brand { font-size: 16px; }
+  .navbar-nav a { padding: 6px 10px; font-size: 13px; }
+  .page-title { font-size: 20px; }
+  .card { padding: 14px; }
+  table { font-size: 12px; }
+  th, td { padding: 8px 6px; }
+  .report-card .week-amounts { flex-wrap: wrap; }
+  .btn { padding: 8px 14px; font-size: 13px; }
+  .card-header { font-size: 12px; flex-wrap: wrap; }
 }
 
 /* SECTION HEADER */

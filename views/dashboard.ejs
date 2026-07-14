@@ -14,6 +14,10 @@
       <li><a href="/dashboard" class="active">Dashboard</a></li>
       <li><a href="/sales">Sales</a></li>
       <li><a href="/reports">Reports</a></li>
+      <% if (user.role === 'admin') { %>
+        <li><a href="/workers">Workers</a></li>
+      <% } %>
+      <li><a href="/profile">Profile</a></li>
       <li class="user-info">Hello, <strong><%= user.fullName %></strong></li>
       <li><a href="/auth/logout">Logout</a></li>
     </ul>
@@ -22,14 +26,13 @@
   <div class="container">
     <h1 class="page-title">Sales Dashboard</h1>
 
-    <!-- DAILY STATS -->
     <h3 style="font-size:14px;color:var(--text-secondary);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px;">Today's Performance</h3>
     <div class="stats-grid">
       <div class="stat-card">
         <div class="label">Total Revenue Today</div>
         <div class="value"><%= daily.total.toLocaleString() %> <span class="currency">SSP</span></div>
         <div class="growth <%= parseFloat(daily.growth) >= 0 ? 'up' : 'down' %>">
-          <%= parseFloat(daily.growth) >= 0 ? '▲' : '▼' %> <%= Math.abs(daily.growth) %>% vs yesterday
+          <%= parseFloat(daily.growth) >= 0 ? '&#9650;' : '&#9660;' %> <%= Math.abs(daily.growth) %>% vs yesterday
         </div>
       </div>
       <div class="stat-card yogurt">
@@ -44,14 +47,13 @@
       </div>
     </div>
 
-    <!-- WEEKLY STATS -->
     <h3 style="font-size:14px;color:var(--text-secondary);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px;">This Week (Last 7 Days)</h3>
     <div class="stats-grid">
       <div class="stat-card">
         <div class="label">Weekly Revenue</div>
         <div class="value"><%= weekly.total.toLocaleString() %> <span class="currency">SSP</span></div>
         <div class="growth <%= parseFloat(weekly.growth) >= 0 ? 'up' : 'down' %>">
-          <%= parseFloat(weekly.growth) >= 0 ? '▲' : '▼' %> <%= Math.abs(weekly.growth) %>% vs last week
+          <%= parseFloat(weekly.growth) >= 0 ? '&#9650;' : '&#9660;' %> <%= Math.abs(weekly.growth) %>% vs last week
         </div>
       </div>
       <div class="stat-card yogurt">
@@ -66,12 +68,14 @@
       </div>
     </div>
 
-    <!-- MONTHLY STATS -->
     <h3 style="font-size:14px;color:var(--text-secondary);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px;">This Month</h3>
     <div class="stats-grid">
       <div class="stat-card">
         <div class="label">Monthly Revenue</div>
         <div class="value"><%= monthly.total.toLocaleString() %> <span class="currency">SSP</span></div>
+        <div class="growth <%= parseFloat(monthly.growth) >= 0 ? 'up' : 'down' %>">
+          <%= parseFloat(monthly.growth) >= 0 ? '&#9650;' : '&#9660;' %> <%= Math.abs(monthly.growth) %>% vs last month
+        </div>
       </div>
       <div class="stat-card yogurt">
         <div class="label">Monthly Yogurt</div>
@@ -85,7 +89,6 @@
       </div>
     </div>
 
-    <!-- CHART + RECENT SALES -->
     <div class="grid-2">
       <div class="card">
         <div class="card-header">Daily Revenue (Last 7 Days)</div>
@@ -100,12 +103,7 @@
         <% } else { %>
           <table>
             <thead>
-              <tr>
-                <th>Date</th>
-                <th>Product</th>
-                <th>Qty</th>
-                <th>Total</th>
-              </tr>
+              <tr><th>Date</th><th>Product</th><th>Qty</th><th>Total</th></tr>
             </thead>
             <tbody>
               <% recentSales.forEach(s => { %>
@@ -154,18 +152,10 @@
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: {
-          legend: { position: 'top' }
-        },
+        plugins: { legend: { position: 'top' } },
         scales: {
           x: { stacked: true, grid: { display: false } },
-          y: {
-            stacked: true,
-            beginAtZero: true,
-            ticks: {
-              callback: v => v.toLocaleString() + ' SSP'
-            }
-          }
+          y: { stacked: true, beginAtZero: true, ticks: { callback: v => v.toLocaleString() + ' SSP' } }
         }
       }
     });

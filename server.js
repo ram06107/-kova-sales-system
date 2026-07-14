@@ -19,7 +19,7 @@ async function start() {
 
   app.use(session({
     store: new SupabaseSessionStore(db),
-    secret: 'kova-sales-secret-2026',
+    secret: process.env.SESSION_SECRET || 'kova-sales-secret-2026',
     resave: false,
     saveUninitialized: false,
     cookie: { maxAge: 7 * 24 * 60 * 60 * 1000 }
@@ -34,6 +34,8 @@ async function start() {
   app.use('/sales', require('./routes/sales'));
   app.use('/dashboard', require('./routes/dashboard'));
   app.use('/reports', require('./routes/reports'));
+  app.use('/workers', require('./routes/workers'));
+  app.use('/profile', require('./routes/profile'));
 
   app.get('/', (req, res) => {
     if (req.session && req.session.userId) {

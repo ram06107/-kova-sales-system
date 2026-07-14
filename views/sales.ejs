@@ -13,6 +13,10 @@
       <li><a href="/dashboard">Dashboard</a></li>
       <li><a href="/sales" class="active">Sales</a></li>
       <li><a href="/reports">Reports</a></li>
+      <% if (user.role === 'admin') { %>
+        <li><a href="/workers">Workers</a></li>
+      <% } %>
+      <li><a href="/profile">Profile</a></li>
       <li class="user-info">Hello, <strong><%= user.fullName %></strong></li>
       <li><a href="/auth/logout">Logout</a></li>
     </ul>
@@ -57,10 +61,58 @@
     </div>
 
     <div class="card" style="margin-top:16px;">
-      <div class="card-header">Sales History</div>
+      <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
+        <span>Sales History (<%= sales.length %> records)</span>
+        <a href="/sales/csv?product=<%= filters.product %>&user_id=<%= filters.user_id %>&date_from=<%= filters.date_from %>&date_to=<%= filters.date_to %>" class="btn btn-outline btn-sm">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg>
+          Export CSV
+        </a>
+      </div>
+
+      <form method="GET" action="/sales" style="margin-bottom:16px;">
+        <div class="form-grid" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr));">
+          <div class="form-group">
+            <label>Product</label>
+            <select name="product">
+              <option value="">All</option>
+              <option value="yogurt" <%= filters.product === 'yogurt' ? 'selected' : '' %>>Yogurt</option>
+              <option value="tea" <%= filters.product === 'tea' ? 'selected' : '' %>>Tea</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Worker</label>
+            <select name="user_id">
+              <option value="">All</option>
+              <% workers.forEach(w => { %>
+                <option value="<%= w.id %>" <%= filters.user_id == w.id ? 'selected' : '' %>><%= w.full_name %></option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>From</label>
+            <input type="date" name="date_from" value="<%= filters.date_from %>">
+          </div>
+          <div class="form-group">
+            <label>To</label>
+            <input type="date" name="date_to" value="<%= filters.date_to %>">
+          </div>
+          <div class="form-group" style="display:flex;gap:6px;margin-top:auto;">
+            <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+            <a href="/sales" class="btn btn-outline btn-sm">Clear</a>
+          </div>
+        </div>
+      </form>
+
       <% if (sales.length === 0) { %>
-        <p style="color:var(--text-secondary);text-align:center;padding:40px 0;">No sales recorded yet. Use the form above to add your first sale.</p>
+        <p style="color:var(--text-secondary);text-align:center;padding:40px 0;">No sales found. Use the form above to add your first sale.</p>
       <% } else { %>
+        <% if (totals.total > 0) { %>
+          <div style="display:flex;gap:24px;margin-bottom:12px;padding:10px 12px;background:#f8f9fa;border-radius:6px;font-size:13px;">
+            <span><strong>Total:</strong> <%= totals.total.toLocaleString() %> SSP</span>
+            <span><strong>Qty:</strong> <%= totals.qty %> units</span>
+            <span><strong>Avg:</strong> <%= Math.round(totals.total / sales.length).toLocaleString() %> SSP/sale</span>
+          </div>
+        <% } %>
         <div class="table-wrapper">
           <table>
             <thead>
@@ -71,7 +123,7 @@
                 <th>Unit Price</th>
                 <th>Total</th>
                 <th>Recorded By</th>
-                <th>Action</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -83,10 +135,11 @@
                   <td><%= s.unit_price.toLocaleString() %> SSP</td>
                   <td><strong><%= s.total_amount.toLocaleString() %> SSP</strong></td>
                   <td><%= s.full_name %></td>
-                  <td>
+                  <td style="white-space:nowrap;">
                     <% if (s.user_id === user.userId || user.role === 'admin') { %>
+                      <a href="/sales/edit/<%= s.id %>" class="btn btn-outline btn-sm">Edit</a>
                       <form method="POST" action="/sales/delete/<%= s.id %>" style="display:inline;" onsubmit="return confirm('Delete this sale?')">
-                        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                        <button type="submit" class="btn btn-danger btn-sm">Del</button>
                       </form>
                     <% } %>
                   </td>

@@ -21,6 +21,7 @@ router.post('/login', async (req, res) => {
   req.session.fullName = user.full_name;
   req.session.role = user.role;
 
+  await db.activity.log(user.id, 'login', 'Logged in');
   return res.redirect('/dashboard');
 });
 
@@ -49,13 +50,16 @@ router.post('/register', async (req, res) => {
   }
 
   const hash = bcrypt.hashSync(password, 10);
-  await db.users.create(username, hash, full_name, 'worker');
+  const newUser = await db.users.create(username, hash, full_name, 'worker');
+  await db.activity.log(newUser.id, 'registered', 'New worker registered');
 
   return res.redirect('/auth/login');
 });
 
 router.get('/logout', (req, res) => {
+  const userId = req.session.userId;
   req.session.destroy(() => {
+    if (userId) db.activity.log(userId, 'logout', 'Logged out').catch(() => {});
     res.redirect('/auth/login');
   });
 });

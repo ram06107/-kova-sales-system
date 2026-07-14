@@ -1,4 +1,5 @@
 node_modules/
 kova_sales.db
 *.db
+kova_data.json
 .env

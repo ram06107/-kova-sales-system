@@ -1,19 +1,19 @@
 const { createClient } = require('@supabase/supabase-js');
 const bcrypt = require('bcryptjs');
 
-const supabaseUrl = 'https://eykguplyjsfquxbpelrp.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV5a2d1cGx5anNmcXV4YnBlbHJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQwMjQ0NTQsImV4cCI6MjA5OTYwMDQ1NH0.2mEI9XfAV0WdLjXajU-FWRQ36zEzFmRhxEZvnUdCS6U';
+const supabaseUrl = process.env.SUPABASE_URL || 'https://eykguplyjsfquxbpelrp.supabase.co';
+const supabaseKey = process.env.SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV5a2d1cGx5anNmcXV4YnBlbHJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQwMjQ0NTQsImV4cCI6MjA5OTYwMDQ1NH0.2mEI9XfAV0WdLjXajU-FWRQ36zEzFmRhxEZvnUdCS6U';
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 const db = {
   users: {
     async findByUsername(username) {
-      const { data, error } = await supabase.from('users').select('*').eq('username', username).maybeSingle();
+      const { data } = await supabase.from('users').select('*').eq('username', username).maybeSingle();
       return data;
     },
     async findById(id) {
-      const { data, error } = await supabase.from('users').select('*').eq('id', id).maybeSingle();
+      const { data } = await supabase.from('users').select('*').eq('id', id).maybeSingle();
       return data;
     },
     async count() {
@@ -26,6 +26,21 @@ const db = {
       }).select().single();
       if (error) throw error;
       return data;
+    },
+    async getAll() {
+      const { data } = await supabase.from('users').select('id, username, full_name, role, created_at').order('created_at', { ascending: false });
+      return data || [];
+    },
+    async update(id, fields) {
+      const { error } = await supabase.from('users').update(fields).eq('id', id);
+      if (error) throw error;
+    },
+    async delete(id) {
+      await supabase.from('users').delete().eq('id', id);
+    },
+    async countWorkers() {
+      const { count } = await supabase.from('users').select('*', { count: 'exact', head: true }).eq('role', 'worker');
+      return count || 0;
     }
   },
 
@@ -37,8 +52,24 @@ const db = {
       (users || []).forEach(u => userMap[u.id] = u.full_name);
       return (sales || []).map(s => ({ ...s, full_name: userMap[s.user_id] || 'Unknown' }));
     },
+    async search(filters) {
+      let query = supabase.from('sales').select('*');
+      if (filters.product) query = query.eq('product', filters.product);
+      if (filters.user_id) query = query.eq('user_id', parseInt(filters.user_id));
+      if (filters.date_from) query = query.gte('sale_date', filters.date_from);
+      if (filters.date_to) query = query.lte('sale_date', filters.date_to);
+      if (filters.search) {
+        query = query.or(`sale_date.ilike.%${filters.search}%`);
+      }
+      query = query.order('sale_date', { ascending: false }).order('created_at', { ascending: false });
+      const { data: sales } = await query;
+      const { data: users } = await supabase.from('users').select('id, full_name');
+      const userMap = {};
+      (users || []).forEach(u => userMap[u.id] = u.full_name);
+      return (sales || []).map(s => ({ ...s, full_name: userMap[s.user_id] || 'Unknown' }));
+    },
     async findById(id) {
-      const { data } = await supabase.from('sales').select('*').eq('id', id).single();
+      const { data } = await supabase.from('sales').select('*').eq('id', id).maybeSingle();
       return data;
     },
     async create(userId, product, quantity, unitPrice, totalAmount, saleDate) {
@@ -47,6 +78,10 @@ const db = {
       }).select().single();
       if (error) throw error;
       return data;
+    },
+    async update(id, fields) {
+      const { error } = await supabase.from('sales').update(fields).eq('id', id);
+      if (error) throw error;
     },
     async delete(id) {
       await supabase.from('sales').delete().eq('id', id);
@@ -60,6 +95,10 @@ const db = {
     async sumAll(startDate, endDate) {
       const { data } = await supabase.from('sales').select('total_amount').gte('sale_date', startDate).lte('sale_date', endDate);
       return (data || []).reduce((sum, s) => sum + Number(s.total_amount), 0);
+    },
+    async getDailyRange(startDate, endDate) {
+      const { data } = await supabase.from('sales').select('sale_date, product, quantity, total_amount').gte('sale_date', startDate).lte('sale_date', endDate).order('sale_date');
+      return data || [];
     },
     async sumByProductGrouped(product, startDate, endDate) {
       const { data } = await supabase.from('sales').select('sale_date, quantity, total_amount').eq('product', product).gte('sale_date', startDate).lte('sale_date', endDate).order('sale_date');
@@ -87,6 +126,19 @@ const db = {
     }
   },
 
+  activity: {
+    async log(userId, action, details) {
+      await supabase.from('activity_log').insert({ user_id: userId, action, details });
+    },
+    async getRecent(limit = 50) {
+      const { data } = await supabase.from('activity_log').select('*').order('created_at', { ascending: false }).limit(limit);
+      const { data: users } = await supabase.from('users').select('id, full_name');
+      const userMap = {};
+      (users || []).forEach(u => userMap[u.id] = u.full_name);
+      return (data || []).map(a => ({ ...a, full_name: userMap[a.user_id] || 'System' }));
+    }
+  },
+
   sessions: {
     async get(sid) {
       const { data } = await supabase.from('sessions').select('data, expires_at').eq('sid', sid).maybeSingle();
@@ -110,23 +162,15 @@ const db = {
 };
 
 async function initApp() {
-  try {
-    await db.sessions.cleanup();
-  } catch (e) {
-    console.log('Session cleanup skipped:', e.message);
-  }
-
+  try { await db.sessions.cleanup(); } catch (e) {}
   try {
     const userCount = await db.users.count();
     if (userCount === 0) {
       const hash = bcrypt.hashSync('admin123', 10);
       await db.users.create('admin', hash, 'Administrator', 'admin');
-      console.log('Default admin account created');
+      console.log('Default admin created — admin / admin123');
     }
-  } catch (e) {
-    console.log('Admin init:', e.message);
-  }
-
+  } catch (e) { console.log('Admin init:', e.message); }
   console.log('Database connected to Supabase');
 }
 

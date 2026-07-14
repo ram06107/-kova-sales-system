@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Edit Sale - KOVA Sales</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-brand">KO<span>VA</span> Sales</div>
+    <ul class="navbar-nav">
+      <li><a href="/dashboard">Dashboard</a></li>
+      <li><a href="/sales" class="active">Sales</a></li>
+      <li><a href="/reports">Reports</a></li>
+      <% if (user.role === 'admin') { %>
+        <li><a href="/workers">Workers</a></li>
+      <% } %>
+      <li><a href="/profile">Profile</a></li>
+      <li class="user-info">Hello, <strong><%= user.fullName %></strong></li>
+      <li><a href="/auth/logout">Logout</a></li>
+    </ul>
+  </nav>
+
+  <div class="container">
+    <h1 class="page-title">Edit Sale #<%= sale.id %></h1>
+
+    <% if (error) { %>
+      <div class="alert alert-error"><%= error %></div>
+    <% } %>
+
+    <div class="card">
+      <form method="POST" action="/sales/edit/<%= sale.id %>">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Product</label>
+            <select name="product" required>
+              <option value="yogurt" <%= sale.product === 'yogurt' ? 'selected' : '' %>>Yogurt</option>
+              <option value="tea" <%= sale.product === 'tea' ? 'selected' : '' %>>Tea</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Quantity</label>
+            <input type="number" name="quantity" value="<%= sale.quantity %>" min="1" required>
+          </div>
+          <div class="form-group">
+            <label>Unit Price (SSP)</label>
+            <input type="number" name="unit_price" value="<%= sale.unit_price %>" min="1" step="0.01" required>
+          </div>
+          <div class="form-group">
+            <label>Sale Date</label>
+            <input type="date" name="sale_date" value="<%= sale.sale_date %>" required>
+          </div>
+          <div class="form-group" style="display:flex;gap:8px;margin-top:auto;">
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+            <a href="/sales" class="btn btn-outline">Cancel</a>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</body>
+</html>
