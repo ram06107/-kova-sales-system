@@ -1,39 +1,30 @@
-const { EventEmitter } = require('events');
+const Store = require('express-session').Store;
 
-class SupabaseSessionStore extends EventEmitter {
+class SupabaseSessionStore extends Store {
   constructor(db) {
     super();
     this.db = db;
   }
 
-  async get(sid, callback) {
-    try {
-      const session = await this.db.sessions.get(sid);
-      callback(null, session);
-    } catch (e) {
-      callback(e);
-    }
+  get(sid, callback) {
+    this.db.sessions.get(sid)
+      .then(session => callback(null, session))
+      .catch(err => callback(err));
   }
 
-  async set(sid, session, callback) {
-    try {
-      const expires = session.cookie && session.cookie.expires
-        ? new Date(session.cookie.expires).toISOString()
-        : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-      await this.db.sessions.set(sid, session, expires);
-      callback(null);
-    } catch (e) {
-      callback(e);
-    }
+  set(sid, session, callback) {
+    const expires = session.cookie && session.cookie.expires
+      ? new Date(session.cookie.expires).toISOString()
+      : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    this.db.sessions.set(sid, session, expires)
+      .then(() => callback(null))
+      .catch(err => callback(err));
   }
 
-  async destroy(sid, callback) {
-    try {
-      await this.db.sessions.destroy(sid);
-      callback(null);
-    } catch (e) {
-      callback(e);
-    }
+  destroy(sid, callback) {
+    this.db.sessions.destroy(sid)
+      .then(() => callback(null))
+      .catch(err => callback(err));
   }
 }
 
