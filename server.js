@@ -1,7 +1,8 @@
 const express = require('express');
 const session = require('express-session');
 const path = require('path');
-const { initDB } = require('./db');
+const { db, initDB } = require('./db');
+const SQLiteSessionStore = require('./session-store');
 
 async function start() {
   await initDB();
@@ -16,11 +17,14 @@ async function start() {
   app.use(express.json());
   app.use(express.static(path.join(__dirname, 'public')));
 
+  const sessionStore = new SQLiteSessionStore(db);
+
   app.use(session({
+    store: sessionStore,
     secret: 'kova-sales-secret-2026',
     resave: false,
     saveUninitialized: false,
-    cookie: { maxAge: 24 * 60 * 60 * 1000 }
+    cookie: { maxAge: 7 * 24 * 60 * 60 * 1000 }
   }));
 
   app.use((req, res, next) => {
